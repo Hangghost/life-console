@@ -13,11 +13,6 @@ venv/
 .pytest_cache/
 .ruff_cache/
 
-openspec/
-openspec/changes/
-openspec/changes/life-console-mvp/
-openspec/changes/life-console-mvp/tasks.md
-openspec/changes/life-console-mvp/tasks.md
 
 out/*
 node_modules/
