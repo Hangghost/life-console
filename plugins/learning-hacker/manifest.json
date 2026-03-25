@@ -1,0 +1,35 @@
+{
+  "name": "learning-hacker",
+  "version": "0.1.0",
+  "display_name": "LearningHacker",
+  "description": "Fetch a webpage or article URL, extract key insights using Claude AI, and save a structured learning note.",
+  "plugin_type": "workflow",
+  "entry": "workflow.ts",
+  "permissions": [
+    "network:external",
+    "llm:claude",
+    "store:write"
+  ],
+  "input_schema": {
+    "url": {
+      "type": "string",
+      "description": "URL of the article, blog post, or webpage to learn from",
+      "required": true
+    },
+    "focus": {
+      "type": "string",
+      "description": "Optional focus area (e.g., 'key concepts', 'action items', 'summary')",
+      "default": "key concepts and takeaways"
+    }
+  },
+  "output": {
+    "auto_create_object": true,
+    "output_type": "note",
+    "title_template": "{{title}} - Learning Notes",
+    "content_field": "summary",
+    "properties": {
+      "source_url": "url",
+      "tags": ["learning", "hacker"]
+    }
+  }
+}
