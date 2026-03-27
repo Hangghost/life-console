@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Sidebar navigation with Skills list
 The application SHALL display a fixed left sidebar listing all registered Skills by `displayName`. Clicking a Skill SHALL switch the main content area to that Skill's UI (or auto-generated form if no `ui.tsx`). The sidebar SHALL NOT show Inbox, Today View, or Toolbox as primary navigation items.
@@ -15,6 +15,8 @@ The application SHALL display a fixed left sidebar listing all registered Skills
 - **WHEN** no Skills are discovered in `skills/`
 - **THEN** the main content area shows a prompt explaining how to add a Skill
 
+## MODIFIED Requirements
+
 ### Requirement: IPC channels for Skill operations
 The application SHALL expose IPC channels `skills:list` (renderer → main, returns registered Skills metadata) and `skills:run` (renderer → main, executes a Skill by name with input). The main process SHALL push execution results back via `skills:result` (main → renderer).
 
@@ -25,24 +27,6 @@ The application SHALL expose IPC channels `skills:list` (renderer → main, retu
 #### Scenario: Skill execution result pushed to renderer
 - **WHEN** a Skill execution completes
 - **THEN** main process sends `skills:result` to renderer with `{ skillName, output, error, recordId }`
-
-### Requirement: IPC channel for full-text search
-The application SHALL expose an IPC channel `search:query` that accepts a search string and returns matching objects using SQLite FTS5.
-
-#### Scenario: Search returns results
-- **WHEN** renderer invokes `search:query` with query="API"
-- **THEN** main process returns all non-archived objects whose title or content matches "API"
-
-### Requirement: API key management
-The application SHALL provide a settings interface for the user to input and persist their Claude API key. The key SHALL be stored locally and never exposed to the renderer process.
-
-#### Scenario: User sets API key
-- **WHEN** user enters their Claude API key in settings
-- **THEN** the key is persisted locally and used for all subsequent Claude API calls
-
-#### Scenario: Missing API key
-- **WHEN** user attempts inbox inference without a configured API key
-- **THEN** the system skips inference and shows a prompt to configure the API key
 
 ## REMOVED Requirements
 
