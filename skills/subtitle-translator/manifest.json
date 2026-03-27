@@ -1,0 +1,33 @@
+{
+  "name": "subtitle-translator",
+  "displayName": "Subtitle Translator",
+  "description": "Translate subtitle files (.srt) into Traditional Chinese using Claude AI.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "filePath": {
+        "type": "string",
+        "description": "Absolute path to the .srt subtitle file to translate"
+      },
+      "targetLanguage": {
+        "type": "string",
+        "description": "Target language for translation",
+        "default": "Traditional Chinese"
+      }
+    },
+    "required": ["filePath"]
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "translatedPath": {
+        "type": "string",
+        "description": "Path to the output translated .srt file"
+      },
+      "lineCount": {
+        "type": "number",
+        "description": "Number of subtitle lines translated"
+      }
+    }
+  }
+}

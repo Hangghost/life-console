@@ -1,15 +1,32 @@
-import React, { useState } from 'react'
-import InboxPage from './pages/InboxPage'
-import TodayPage from './pages/TodayPage'
-import ToolboxPage from './pages/ToolboxPage'
+import React, { useState, useEffect } from 'react'
+import SkillPage from './pages/SkillPage'
 import SettingsPage from './pages/SettingsPage'
-import SearchOverlay from './components/SearchOverlay'
+import KnowledgePage from './pages/KnowledgePage'
+import DistillationPage from './pages/DistillationPage'
+import { api } from './hooks/useIPC'
+import type { RegisteredSkill } from '../../shared/types'
 
-type Page = 'inbox' | 'today' | 'toolbox' | 'settings'
+type ActiveView =
+  | { type: 'skill'; skillName: string }
+  | { type: 'settings' }
+  | { type: 'knowledge' }
+  | { type: 'distillation' }
+  | { type: 'empty' }
 
 export default function App(): React.ReactElement {
-  const [activePage, setActivePage] = useState<Page>('inbox')
-  const [searchOpen, setSearchOpen] = useState(false)
+  const [skills, setSkills] = useState<RegisteredSkill[]>([])
+  const [activeView, setActiveView] = useState<ActiveView>({ type: 'knowledge' })
+
+  useEffect(() => {
+    api.skills.list().then((list) => {
+      setSkills(list)
+    })
+  }, [])
+
+  const activeSkill =
+    activeView.type === 'skill'
+      ? skills.find((s) => s.manifest.name === activeView.skillName)
+      : undefined
 
   return (
     <div style={styles.layout}>
@@ -17,64 +34,78 @@ export default function App(): React.ReactElement {
       <nav style={styles.sidebar}>
         <div style={styles.appTitle}>Life Console</div>
 
+        <div style={styles.sectionLabel}>Workspace</div>
         <div style={styles.navSection}>
           <NavItem
-            label="Inbox"
-            icon="📥"
-            active={activePage === 'inbox'}
-            onClick={() => setActivePage('inbox')}
+            label="Knowledge"
+            active={activeView.type === 'knowledge'}
+            onClick={() => setActiveView({ type: 'knowledge' })}
           />
           <NavItem
-            label="Today"
-            icon="📅"
-            active={activePage === 'today'}
-            onClick={() => setActivePage('today')}
+            label="Distillation"
+            active={activeView.type === 'distillation'}
+            onClick={() => setActiveView({ type: 'distillation' })}
           />
-          <NavItem
-            label="Toolbox"
-            icon="🧰"
-            active={activePage === 'toolbox'}
-            onClick={() => setActivePage('toolbox')}
-          />
-          <NavItem
-            label="Search"
-            icon="🔍"
-            active={false}
-            onClick={() => setSearchOpen(true)}
-          />
+        </div>
+
+        <div style={styles.sectionLabel}>Skills</div>
+        <div style={styles.navSection}>
+          {skills.map((skill) => (
+            <NavItem
+              key={skill.manifest.name}
+              label={skill.manifest.displayName}
+              active={
+                activeView.type === 'skill' && activeView.skillName === skill.manifest.name
+              }
+              onClick={() => setActiveView({ type: 'skill', skillName: skill.manifest.name })}
+            />
+          ))}
+
+          {skills.length === 0 && (
+            <div style={styles.emptySkills}>No skills found</div>
+          )}
         </div>
 
         <div style={styles.navBottom}>
           <NavItem
             label="Settings"
-            icon="⚙️"
-            active={activePage === 'settings'}
-            onClick={() => setActivePage('settings')}
+            active={activeView.type === 'settings'}
+            onClick={() => setActiveView({ type: 'settings' })}
           />
         </div>
       </nav>
 
       {/* Main content */}
       <main style={styles.content}>
-        {activePage === 'inbox' && <InboxPage />}
-        {activePage === 'today' && <TodayPage />}
-        {activePage === 'toolbox' && <ToolboxPage />}
-        {activePage === 'settings' && <SettingsPage />}
+        {activeView.type === 'skill' && activeSkill && (
+          <SkillPage skill={activeSkill} />
+        )}
+        {activeView.type === 'settings' && <SettingsPage />}
+        {activeView.type === 'knowledge' && <KnowledgePage />}
+        {activeView.type === 'distillation' && <DistillationPage />}
+        {activeView.type === 'empty' && <EmptyState />}
       </main>
+    </div>
+  )
+}
 
-      {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} />}
+function EmptyState(): React.ReactElement {
+  return (
+    <div style={styles.emptyState}>
+      <div style={styles.emptyStateTitle}>Welcome to Life Console</div>
+      <div style={styles.emptyStateBody}>
+        Select Knowledge or Distillation to get started.
+      </div>
     </div>
   )
 }
 
 function NavItem({
   label,
-  icon,
   active,
   onClick
 }: {
   label: string
-  icon: string
   active: boolean
   onClick: () => void
 }): React.ReactElement {
@@ -86,13 +117,12 @@ function NavItem({
         ...(active ? styles.navItemActive : {})
       }}
     >
-      <span style={styles.navIcon}>{icon}</span>
       <span>{label}</span>
     </button>
   )
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, React.CSSProperties & Record<string, unknown>> = {
   layout: {
     display: 'flex',
     height: '100vh',
@@ -106,7 +136,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     padding: '0',
-    WebkitAppRegion: 'drag' as never
+    WebkitAppRegion: 'drag'
   },
   appTitle: {
     padding: '20px 16px 12px',
@@ -116,12 +146,21 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: '-0.3px',
     paddingTop: 40 // account for macOS traffic lights
   },
+  sectionLabel: {
+    padding: '8px 16px 4px',
+    fontSize: 11,
+    fontWeight: 600,
+    color: '#4a5568',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.08em'
+  },
   navSection: {
-    flex: 1,
-    padding: '8px 8px'
+    padding: '0 8px',
+    overflowY: 'auto' as const
   },
   navBottom: {
-    padding: '8px 8px 16px'
+    padding: '8px 8px 16px',
+    marginTop: 'auto'
   },
   navItem: {
     display: 'flex',
@@ -135,19 +174,36 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#a0aec0',
     fontSize: 14,
     textAlign: 'left',
-    WebkitAppRegion: 'no-drag' as never,
+    WebkitAppRegion: 'no-drag',
     transition: 'background 0.15s, color 0.15s'
   },
   navItemActive: {
     background: '#2d3748',
     color: '#e2e8f0'
   },
-  navIcon: {
-    fontSize: 16
-  },
   content: {
     flex: 1,
     overflow: 'auto',
     background: '#1a1a2e'
+  },
+  emptySkills: {
+    padding: '12px 12px',
+    color: '#4a5568',
+    fontSize: 13
+  },
+  emptyState: {
+    padding: '60px 40px',
+    maxWidth: 480
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 700,
+    color: '#e2e8f0',
+    marginBottom: 12
+  },
+  emptyStateBody: {
+    fontSize: 14,
+    color: '#718096',
+    lineHeight: 1.6
   }
 }

@@ -1,3 +1,4 @@
+// @ts-nocheck — preserved for future re-enablement
 import React from 'react'
 import type { InferenceResult, LifeObject } from '../../../shared/types'
 

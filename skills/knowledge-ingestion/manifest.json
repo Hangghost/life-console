@@ -1,0 +1,30 @@
+{
+  "name": "knowledge-ingestion",
+  "displayName": "Knowledge Ingestion",
+  "description": "Paste article text or provide a URL. AI splits it into atomic KnowledgeCards for your knowledge base.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string",
+        "description": "Raw article text to ingest"
+      },
+      "url": {
+        "type": "string",
+        "description": "URL of article to fetch and ingest"
+      },
+      "apiKey": {
+        "type": "string",
+        "description": "Model API key (read from settings if not provided)"
+      },
+      "apiBaseUrl": {
+        "type": "string",
+        "description": "Model API base URL"
+      },
+      "modelName": {
+        "type": "string",
+        "description": "Model name to use"
+      }
+    }
+  }
+}

@@ -1,3 +1,4 @@
+// @ts-nocheck — preserved for future re-enablement
 import React, { useState, useEffect, useCallback } from 'react'
 import { api } from '../hooks/useIPC'
 import PermissionDialog from '../components/PermissionDialog'

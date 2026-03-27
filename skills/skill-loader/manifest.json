@@ -1,0 +1,19 @@
+{
+  "name": "skill-loader",
+  "displayName": "Skill Loader",
+  "description": "Reads the Agent Layer and writes context files to configured IDE targets (Claude Code, Cursor, etc.).",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "targets": {
+        "type": "string",
+        "description": "JSON array of SkillLoaderTarget objects (overrides settings). Leave empty to use saved targets."
+      },
+      "mcpPort": {
+        "type": "number",
+        "description": "MCP Server port",
+        "default": 7777
+      }
+    }
+  }
+}
