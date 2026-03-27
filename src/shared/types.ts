@@ -1,207 +1,174 @@
-// ─── Core Object Model ────────────────────────────────────────────────────────
+// ─── Context Store ────────────────────────────────────────────────────────────
 
-export type ObjectType = 'inbox_item' | 'task' | 'note' | 'workflow_run'
-
-export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'blocked'
-export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
-
-export interface TaskProperties {
-  status: TaskStatus
-  priority?: TaskPriority
-  due_date?: string // ISO 8601 date
-  estimated_minutes?: number
-  category?: string
-  recurrence?: string
-}
-
-export interface NoteProperties {
-  tags?: string[]
-  source_url?: string
-  source_tool?: string
-}
-
-export interface InboxItemProperties {
-  suggested_type?: 'task' | 'note' | null
-  suggested_confidence?: number
-  raw_input?: string
-}
-
-export type WorkflowRunStatus = 'running' | 'completed' | 'failed'
-
-export interface WorkflowRunProperties {
-  tool_name: string
-  tool_version?: string
-  input_params?: Record<string, unknown>
-  status: WorkflowRunStatus
-  duration_ms?: number
-  output_object_ids?: string[]
-}
-
-export type ObjectProperties =
-  | TaskProperties
-  | NoteProperties
-  | InboxItemProperties
-  | WorkflowRunProperties
-
-export interface AIMetadataCorrection {
-  field: string
-  from: unknown
-  to: unknown
-  timestamp: string
-}
-
-export interface AIMetadata {
-  inferred_type?: ObjectType | null
-  inference_confidence?: number
-  last_inference_model?: string
-  user_corrections?: AIMetadataCorrection[]
-}
-
-export interface LifeObject {
+export interface ContextRecord {
   id: string
-  type: ObjectType
-  title?: string
-  content?: string
-  properties?: ObjectProperties
-  source?: string
-  ai_metadata?: AIMetadata
-  created_at: string
-  updated_at: string
-  archived: 0 | 1
-}
-
-export interface Task extends LifeObject {
-  type: 'task'
-  properties?: TaskProperties
-}
-
-export interface Note extends LifeObject {
-  type: 'note'
-  properties?: NoteProperties
-}
-
-export interface InboxItem extends LifeObject {
-  type: 'inbox_item'
-  properties?: InboxItemProperties
-}
-
-export interface WorkflowRun extends LifeObject {
-  type: 'workflow_run'
-  properties?: WorkflowRunProperties
-}
-
-// ─── Relations ────────────────────────────────────────────────────────────────
-
-export type RelationType = 'produces' | 'relates_to' | 'subtask_of' | 'derived_from'
-
-export interface Relation {
-  id: string
-  from_id: string
-  to_id: string
-  type: RelationType
+  skill_name: string
+  input: unknown
+  output: unknown
+  error: string | null
   created_at: string
 }
 
-// ─── IPC Payloads ─────────────────────────────────────────────────────────────
-
-export interface CreateObjectPayload {
-  type: ObjectType
-  title?: string
-  content?: string
-  properties?: ObjectProperties
-  source?: string
-  ai_metadata?: AIMetadata
+export interface InsertRecordPayload {
+  skill_name: string
+  input: unknown
+  output: unknown
+  error?: string | null
 }
 
-export interface UpdateObjectPayload {
-  id: string
-  title?: string
-  content?: string
-  properties?: ObjectProperties
-  ai_metadata?: AIMetadata
-  type?: ObjectType
-}
-
-export interface QueryObjectsFilter {
-  type?: ObjectType
-  status?: string
+export interface QueryRecordsFilter {
+  skillName?: string
   limit?: number
-  offset?: number
-}
-
-export interface CreateRelationPayload {
-  from_id: string
-  to_id: string
-  type: RelationType
-}
-
-export interface SearchResult {
-  objects: LifeObject[]
-}
-
-// ─── Inference ────────────────────────────────────────────────────────────────
-
-export interface InferenceResult {
-  objectId: string
-  type: 'task' | 'note' | null
-  confidence: number
-  title?: string
-  properties?: TaskProperties | NoteProperties
-}
-
-// ─── Plugin Manifest ──────────────────────────────────────────────────────────
-
-export type PluginPermission =
-  | 'network:external'
-  | 'llm:claude'
-  | 'fs:read'
-  | 'fs:write'
-  | 'store:read'
-  | 'store:write'
-
-export interface PluginInputSchemaField {
-  type: 'string' | 'number' | 'boolean'
-  description?: string
-  default?: unknown
-  required?: boolean
-}
-
-export interface PluginOutputMapping {
-  auto_create_object?: boolean
-  output_type?: ObjectType
-  title_template?: string
-  content_field?: string
-  properties?: Record<string, string>
-}
-
-export interface PluginManifest {
-  name: string
-  version: string
-  display_name: string
-  description: string
-  plugin_type: 'workflow'
-  entry: string
-  permissions: PluginPermission[]
-  input_schema: Record<string, PluginInputSchemaField>
-  output?: PluginOutputMapping
-}
-
-export interface RegisteredPlugin {
-  manifest: PluginManifest
-  pluginDir: string
-  approved: boolean
-}
-
-export interface PluginStatusEvent {
-  name: string
-  status: WorkflowRunStatus
-  result?: unknown
-  error?: string
-  workflowRunId?: string
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
 
 export interface AppSettings {
   claudeApiKey?: string
+  kb_directory?: string
+  mcp_port?: number
+  model_api_type?: 'openai' | 'anthropic'
+  model_api_key?: string
+  model_api_base_url?: string
+  model_name?: string
+  skill_loader_targets?: string // JSON string of SkillLoaderTarget[]
+}
+
+// ─── Knowledge Base ───────────────────────────────────────────────────────────
+
+export interface KnowledgeCardFrontmatter {
+  id: string
+  type: 'KnowledgeCard'
+  topic: string
+  source: string
+  source_type: 'ai_inferred' | 'ai_confirmed' | 'user_defined'
+  created_at: string
+  tags: string[]
+}
+
+export interface KnowledgeCard {
+  frontmatter: KnowledgeCardFrontmatter
+  content: string
+  filePath: string
+}
+
+export interface SourceArticleFrontmatter {
+  id: string
+  type: 'SourceArticle'
+  url?: string
+  title: string
+  ingested_at: string
+}
+
+export interface SourceArticle {
+  frontmatter: SourceArticleFrontmatter
+  content: string
+  filePath: string
+}
+
+export interface KnowledgeCardDraft {
+  topic: string
+  tags: string[]
+  content: string
+  modified: boolean
+}
+
+export interface ConfirmCardsPayload {
+  sourceContent: string
+  sourceTitle: string
+  sourceUrl?: string
+  cards: { topic: string; tags: string[]; content: string; source_type: 'ai_confirmed' | 'user_defined' }[]
+}
+
+// ─── Agent Layer ──────────────────────────────────────────────────────────────
+
+export interface AxiomFrontmatter {
+  id: string
+  title: string
+  category: 'architecture' | 'methodology' | 'technical' | 'values'
+  created_at: string
+  last_updated: string
+}
+
+export interface Axiom {
+  frontmatter: AxiomFrontmatter
+  content: string
+  filePath: string
+}
+
+export interface MethodologyFrontmatter {
+  id: string
+  title: string
+  applicable_to: string[]
+  created_at: string
+  version: number
+}
+
+export interface Methodology {
+  frontmatter: MethodologyFrontmatter
+  content: string
+  filePath: string
+}
+
+export interface WriteBackPayload {
+  type: 'new-axiom' | 'update-axiom' | 'new-methodology' | 'update-methodology'
+  id?: string
+  content: string
+  frontmatter: Record<string, unknown>
+}
+
+// ─── MCP ──────────────────────────────────────────────────────────────────────
+
+export interface MCPStatus {
+  running: boolean
+  port: number
+  url: string
+  error?: string
+}
+
+// ─── Skill Loader ─────────────────────────────────────────────────────────────
+
+export interface SkillLoaderTarget {
+  name: string
+  path: string
+  enabled: boolean
+}
+
+// ─── Skill Manifest ───────────────────────────────────────────────────────────
+
+export interface SkillInputSchemaProperty {
+  type: 'string' | 'number' | 'boolean'
+  description?: string
+  default?: unknown
+}
+
+export interface SkillInputSchema {
+  type: 'object'
+  properties: Record<string, SkillInputSchemaProperty>
+  required?: string[]
+}
+
+export interface SkillManifest {
+  name: string
+  displayName: string
+  description: string
+  inputSchema: SkillInputSchema
+  outputSchema?: Record<string, unknown>
+}
+
+// ─── Registered Skill (metadata returned by skills:list) ──────────────────────
+
+export interface RegisteredSkill {
+  manifest: SkillManifest
+  skillDir: string
+  hasUI: boolean
+}
+
+// ─── Skill Result Event (pushed via skills:result) ────────────────────────────
+
+export interface SkillResultEvent {
+  skillName: string
+  output: unknown
+  error: string | null
+  recordId: string
 }

@@ -3,9 +3,12 @@
   "include": ["electron.vite.config.*", "src/main/**/*", "src/preload/**/*", "src/shared/**/*"],
   "compilerOptions": {
     "composite": true,
+    "moduleResolution": "bundler",
     "types": ["electron-vite/node"],
     "paths": {
-      "@shared/*": ["./src/shared/*"]
+      "@shared/*": ["./src/shared/*"],
+      "@modelcontextprotocol/sdk/server/sse.js": ["./node_modules/@modelcontextprotocol/sdk/dist/cjs/server/sse"],
+      "@modelcontextprotocol/sdk/types.js": ["./node_modules/@modelcontextprotocol/sdk/dist/cjs/types"]
     }
   }
 }

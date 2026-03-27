@@ -1,71 +1,82 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type {
-  CreateObjectPayload,
-  UpdateObjectPayload,
-  QueryObjectsFilter,
-  CreateRelationPayload,
-  LifeObject,
-  Relation,
-  SearchResult,
-  RegisteredPlugin,
-  PluginStatusEvent,
-  InferenceResult,
-  AppSettings
+  AppSettings,
+  InsertRecordPayload,
+  QueryRecordsFilter,
+  ContextRecord,
+  RegisteredSkill,
+  SkillResultEvent,
+  KnowledgeCard,
+  KnowledgeCardFrontmatter,
+  Axiom,
+  Methodology,
+  WriteBackPayload,
+  ConfirmCardsPayload,
+  MCPStatus
 } from '../shared/types'
 
 // ─── Typed API exposed to renderer ───────────────────────────────────────────
 
 const api = {
-  objects: {
-    create: (payload: CreateObjectPayload): Promise<LifeObject> =>
-      ipcRenderer.invoke('objects:create', payload),
-    update: (payload: UpdateObjectPayload): Promise<LifeObject> =>
-      ipcRenderer.invoke('objects:update', payload),
-    query: (filter: QueryObjectsFilter): Promise<LifeObject[]> =>
-      ipcRenderer.invoke('objects:query', filter),
-    delete: (id: string): Promise<void> => ipcRenderer.invoke('objects:delete', id)
+  context: {
+    insert: (payload: InsertRecordPayload): Promise<ContextRecord> =>
+      ipcRenderer.invoke('context:insert', payload),
+    query: (filter: QueryRecordsFilter): Promise<ContextRecord[]> =>
+      ipcRenderer.invoke('context:query', filter)
   },
 
-  relations: {
-    create: (payload: CreateRelationPayload): Promise<Relation> =>
-      ipcRenderer.invoke('relations:create', payload),
-    query: (filter: { from_id?: string; to_id?: string }): Promise<Relation[]> =>
-      ipcRenderer.invoke('relations:query', filter)
-  },
-
-  search: {
-    query: (q: string): Promise<SearchResult> => ipcRenderer.invoke('search:query', q)
-  },
-
-  inbox: {
-    onInfer: (cb: (result: InferenceResult) => void): (() => void) => {
-      const handler = (_event: Electron.IpcRendererEvent, result: InferenceResult): void =>
+  skills: {
+    list: (): Promise<RegisteredSkill[]> => ipcRenderer.invoke('skills:list'),
+    run: (name: string, input: unknown): Promise<void> =>
+      ipcRenderer.invoke('skills:run', name, input),
+    onResult: (cb: (event: SkillResultEvent) => void): (() => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, result: SkillResultEvent): void =>
         cb(result)
-      ipcRenderer.on('inbox:infer', handler)
-      return () => ipcRenderer.removeListener('inbox:infer', handler)
+      ipcRenderer.on('skills:result', handler)
+      return () => ipcRenderer.removeListener('skills:result', handler)
     }
-  },
-
-  plugins: {
-    list: (): Promise<RegisteredPlugin[]> => ipcRenderer.invoke('plugins:list'),
-    run: (name: string, input: Record<string, unknown>): Promise<string> =>
-      ipcRenderer.invoke('plugins:run', name, input),
-    onStatus: (cb: (event: PluginStatusEvent) => void): (() => void) => {
-      const handler = (_event: Electron.IpcRendererEvent, status: PluginStatusEvent): void =>
-        cb(status)
-      ipcRenderer.on('plugins:status', handler)
-      return () => ipcRenderer.removeListener('plugins:status', handler)
-    },
-    approvePlugin: (name: string): Promise<void> =>
-      ipcRenderer.invoke('plugins:approve', name),
-    denyPlugin: (name: string): Promise<void> =>
-      ipcRenderer.invoke('plugins:deny', name)
   },
 
   settings: {
     get: (): Promise<AppSettings> => ipcRenderer.invoke('settings:get'),
     set: (settings: Partial<AppSettings>): Promise<void> =>
-      ipcRenderer.invoke('settings:set', settings)
+      ipcRenderer.invoke('settings:set', settings),
+    openFolderDialog: (): Promise<string | null> =>
+      ipcRenderer.invoke('settings:open-folder-dialog')
+  },
+
+  knowledge: {
+    list: (): Promise<KnowledgeCard[]> => ipcRenderer.invoke('knowledge:list'),
+    get: (id: string): Promise<KnowledgeCard | null> => ipcRenderer.invoke('knowledge:get', id),
+    search: (query: string, limit?: number): Promise<KnowledgeCard[]> =>
+      ipcRenderer.invoke('knowledge:search', query, limit),
+    update: (
+      filePath: string,
+      updates: Partial<KnowledgeCardFrontmatter & { content: string }>
+    ): Promise<KnowledgeCard | null> => ipcRenderer.invoke('knowledge:update', filePath, updates),
+    export: (): Promise<{ success: boolean; path: string }> =>
+      ipcRenderer.invoke('knowledge:export'),
+    confirmCards: (payload: ConfirmCardsPayload): Promise<{ sourceFilePath: string; cardFilePaths: string[] }> =>
+      ipcRenderer.invoke('knowledge:confirm-cards', payload),
+    delete: (filePath: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('knowledge:delete', filePath)
+  },
+
+  agent: {
+    listAxioms: (category?: string): Promise<Axiom[]> =>
+      ipcRenderer.invoke('agent:list-axioms', category),
+    listMethodologies: (): Promise<Methodology[]> =>
+      ipcRenderer.invoke('agent:list-methodologies'),
+    getMethodology: (topic: string): Promise<Methodology | null> =>
+      ipcRenderer.invoke('agent:get-methodology', topic),
+    writeBack: (payload: WriteBackPayload): Promise<{ success: boolean; filePath?: string; error?: string }> =>
+      ipcRenderer.invoke('agent:write-back', payload),
+    llmCall: (params: { url: string; headers: Record<string, string>; body: string }): Promise<{ ok: boolean; status: number; text: string }> =>
+      ipcRenderer.invoke('agent:llm-call', params)
+  },
+
+  mcp: {
+    getStatus: (): Promise<MCPStatus> => ipcRenderer.invoke('mcp:get-status')
   },
 
   shell: {
@@ -75,17 +86,5 @@ const api = {
 }
 
 contextBridge.exposeInMainWorld('api', api)
-
-// Forward inbox:trigger-infer window events to main process
-window.addEventListener('inbox:trigger-infer', (e) => {
-  const detail = (e as CustomEvent<{ id: string; content: string }>).detail
-  ipcRenderer.send('inbox:trigger-infer', detail.id, detail.content)
-})
-
-// Forward launch-external events to main process
-window.addEventListener('launch-external', (e) => {
-  const detail = (e as CustomEvent<{ app: string; path?: string }>).detail
-  ipcRenderer.send('shell:launch-external', detail)
-})
 
 export type API = typeof api
